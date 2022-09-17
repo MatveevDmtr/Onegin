@@ -8,10 +8,10 @@
         }\
 }
 
-#define allocate_array(type, num_bytes)        \
-    (type*) calloc (num_bytes, sizeof (type)); \
-    printf ("Type_calloc: %s\n", #type);       \
-    printf ("Sizeof type: %d\n", sizeof (type*))
+#define allocate_array(type, num_bytes)             \
+    (type*) calloc (num_bytes, sizeof (type));      \
+    printf ("Type_calloc: %s\n", #type);            \
+    printf ("Sizeof type: %d\n", sizeof (type*));
 
 //char* a = alloc_array (int, 10);
 
