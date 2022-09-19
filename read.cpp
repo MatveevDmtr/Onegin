@@ -1,23 +1,26 @@
 #include "onegin.h"
 #include "defines.h"
 
-int read_file(char* filename, type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs)   //fread ftell fseek
+int read_file(char* filename,
+              type_buf_char* ptr_text_buf,
+              type_buf_ptrs* ptr_buf_adrs,
+              type_buf_ptrs* ptr_const_buf_adrs)   //fread ftell fseek
 {
     FILE* text_file = open_file_rmode(filename);
 
     //def_and_check(ptr_text_buf->Size, get_file_size(text_file), NULL);
 
-    ptr_text_buf->Size = get_file_size(text_file) + 1;
+    ptr_text_buf->Size = safe_def_int(get_file_size(text_file) + 1, NULL + 1);
 
-    Assert(ptr_text_buf->Size == NULL);
+    //Assert(ptr_text_buf->Size == NULL);
 
     printf("Size of file is: %d bytes.\n", ptr_text_buf->Size);
 
     //def_and_check(ptr_text_buf->Ptr, allocate_array(char, ptr_text_buf->Size), NULL);
 
-    ptr_text_buf->Ptr = (char*) calloc(ptr_text_buf->Size, sizeof(char));
+    ptr_text_buf->Ptr = allocate_array(char, ptr_text_buf->Size);
 
-    Assert(ptr_text_buf->Ptr == NULL);
+    //Assert(ptr_text_buf->Ptr == NULL);
 
     text_to_buffer(text_file, ptr_text_buf); //r_file?      // rename
 
@@ -25,7 +28,9 @@ int read_file(char* filename, type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_bu
 
     fclose(text_file);
 
-    make_pointers_to_lines(ptr_text_buf, ptr_buf_adrs);
+    make_pointers_to_lines(ptr_text_buf,
+                           ptr_buf_adrs,
+                           ptr_const_buf_adrs);
 
     //txDump((*ptr_text_buf).Ptr);
 
@@ -52,32 +57,43 @@ FILE* open_file_rmode(char* filename)
 }
 
 // rename, transfer to read_file
-int make_pointers_to_lines(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs)
+int make_pointers_to_lines(type_buf_char* ptr_text_buf,
+                           type_buf_ptrs* ptr_buf_adrs,
+                           type_buf_ptrs* ptr_const_buf_adrs)
 {
     ptr_text_buf->Num_lines = count_lines(ptr_text_buf);
 
     printf("Num lines: %d\n", ptr_text_buf->Num_lines);
 
-    ptr_buf_adrs->Ptr = (char**) calloc(ptr_buf_adrs->Size, sizeof(char*));
+    ptr_buf_adrs->Ptr       = allocate_array(char*, ptr_text_buf->Num_lines);
+    ptr_const_buf_adrs->Ptr = allocate_array(char*, ptr_text_buf->Num_lines);
 
     create_array_ptr(ptr_text_buf, ptr_buf_adrs);
 
+    ptr_const_buf_adrs->Size = ptr_buf_adrs->Size;
+
+    //printf("PTR_ARRAY_CREATED\n");
+                                                         // get rid of 2nd ptr array
+    for (size_t i = 0; i < ptr_text_buf->Num_lines; i++) // move to copy function
+    {
+        (ptr_const_buf_adrs->Ptr)[i] = (ptr_buf_adrs->Ptr)[i];
+
+        printf("Pointer %p copied\n", (ptr_const_buf_adrs->Ptr)[i]);
+    }
 }
 
 int text_to_buffer(FILE* file, type_buf_char* ptr_text_buf)
 {
     size_t num_read_sym = fread(ptr_text_buf->Ptr, sizeof(char), ptr_text_buf->Size, file);
-
-
-
+    // ferror
     Assert(num_read_sym == 0);
 
     printf("buffer size: %d\n"
            "fread number of symbols: %d\n", ptr_text_buf->Size, num_read_sym);
 
-    if (ptr_text_buf->Size - 1!= num_read_sym)
+    if (ptr_text_buf->Size - 1 != num_read_sym)
     {
-        printf("Program dies from cringe\n");
+        printf("Program dies from cringe encoding\n");
         return 0;
     }
 
@@ -117,7 +133,7 @@ int create_array_ptr(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs) /
 
     return 1;
 }
-
+// static - where to create
 int is_line_empty(char* ptr_line)
 {
     while (!end_of_line(*ptr_line))
@@ -148,7 +164,7 @@ int count_lines(type_buf_char* ptr_text_buf)
                 num_lines++;
             }
             ptr_prev_line = ptr_text_buf->Ptr + i + 1;
-        }   // empty lines
+        }
     }
 
     if (!is_line_empty(ptr_prev_line))
@@ -163,7 +179,7 @@ int count_lines(type_buf_char* ptr_text_buf)
     return num_lines;
 }
 
-int get_file_size(FILE* file)
+int get_file_size(FILE* file) // fstat
 {
     Assert(file == NULL);
 

@@ -1,16 +1,5 @@
 #include "onegin.h"
 
-int write_file(char* filename, type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs)
-{
-    FILE* w_file = open_Wfile(filename);
-
-    printf("Wfile opened\n");
-
-    putting_buf_text_to_file(ptr_buf_adrs, w_file);
-
-    fclose(w_file);
-}
-
 int putting_buf_text_to_file(type_buf_ptrs* ptr_buf_adrs, FILE* w_file)
 {
     for (size_t i = 0; i < ptr_buf_adrs->Size; i++)
