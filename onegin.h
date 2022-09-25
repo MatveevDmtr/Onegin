@@ -10,6 +10,15 @@
 
 #include "defines.h"
 
+const int MAX_LEN_LINE = 30;
+
+typedef struct prop_line
+{
+    char* Loc;
+    size_t Len;
+}
+type_prop_line;
+
 typedef struct buffer_char
 {
     char* Ptr; //  ptr_text
@@ -20,30 +29,42 @@ type_buf_char;
 
 typedef struct buffer_ptrs
 {
-    char** Ptr;   //  ptr_buf_adr
+    type_prop_line** Ptr;
     size_t Size;
 }
 type_buf_ptrs;
 
+typedef struct buffer_structs
+{
+    type_prop_line* Ptr;
+    size_t Size;
+}
+type_buf_structs;
+
+enum TYPE_SORT
+{
+    MERGE = 0,
+    QSORT = 1
+};
+
+int handle_cmd_args(int argc, char** argv, TYPE_SORT* ptr_type_sort);
 
 int read_file(char* filename,
               type_buf_char* ptr_text_buf,
-              type_buf_ptrs* ptr_buf_adrs,
-              type_buf_ptrs* ptr_const_buf_ptrs);
-
-char* allocate_text(int num_bytes);
-
-char** allocate_ptrs(int num_ptrs);
+              type_buf_structs* ptr_arr_structs,
+              type_buf_ptrs* ptr_arr_ptrs);
 
 int text_to_buffer(FILE* file, type_buf_char* ptr_text_buf);
 
 FILE* open_file_rmode(char* filename);
 
 int make_pointers_to_lines(type_buf_char* ptr_text_buf,
-                           type_buf_ptrs* ptr_buf_adrs,
-                           type_buf_ptrs* ptr_const_buf_adrs);
+                           type_buf_structs* ptr_arr_structs,
+                           type_buf_ptrs* ptr_arr_adrs);
 
-int create_array_ptr(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs);
+int create_array_ptr(type_buf_char*    ptr_text_buf,
+                     type_buf_structs* ptr_arr_structs,
+                     type_buf_ptrs*    ptr_buf_adrs);
 
 int get_file_size(FILE* file);
 
@@ -53,50 +74,47 @@ bool isletter(char sym);
 
 int test_comparison();
 
-int str_compare(const char* ptr_line1, const char* ptr_line2);
+int str_compare(type_prop_line* ptr_line1, type_prop_line* ptr_line2);
 
-int str_compare_reverse(const char* ptr_line1, const char* ptr_line2);
+int str_compare_reverse(type_prop_line* ptr_line1,
+                        type_prop_line* ptr_line2);
 
-int sort_text(type_buf_ptrs* ptr_buf_adrs,
-              char* type_sort,
+int sort_text(type_buf_ptrs* ptr_arr_structs,
+              TYPE_SORT type_sort,
               int (*comparator)(const void* line1, const void* line2));
 
-int merge_sort_all(type_buf_ptrs* ptr_buf_adrs,
+int merge_sort_all(type_buf_ptrs* ptr_arr_structs,
                    int (*comparator)(const void* line1, const void* line2));
 
 int single_merge(type_buf_ptrs* arr,
                  type_buf_ptrs* temp,
-                 char** ptr_start,
-                 char** ptr_end,
+                 type_prop_line** ptr_start,
+                 type_prop_line** ptr_end,
                  int (*comparator)(const void* line1, const void* line2));
 
 int Merge(type_buf_ptrs* arr,
           type_buf_ptrs* temp,
-          char** ptr1,
-          char** ptr2,
-          char** ptr2_end,
+          type_prop_line** ptr1,
+          type_prop_line** ptr2,
+          type_prop_line** ptr2_end,
           int (*comparator)(const void* line1, const void* line2));
 
-//int merge_sort_single(type_buf_ptrs* arr, type_buf_ptrs* temp_arr, char** ptr_begin, char** ptr_end);
-
-//void Merge(type_buf_ptrs* arr, type_buf_ptrs* temp_arr, char** ptr1, char** ptr2, char** ptr_end);
-
-int print_arr_ptrs(type_buf_ptrs* ptr_buf_adrs);
+int print_arr_ptrs(type_buf_structs* ptr_arr_structs);
 
 int sort_and_write(char* filename,
                type_buf_char* ptr_text_buf,
-               type_buf_ptrs* ptr_buf_adrs,
-               type_buf_ptrs* ptr_const_buf_adrs);
+               type_buf_structs* ptr_arr_structs,
+               type_buf_ptrs* ptr_arr_adrs);
 
 FILE* open_Wfile(char* filename);
 
-int putting_buf_text_to_file(type_buf_ptrs* ptr_buf_adrs, FILE* w_file);
+int putting_buf_text_to_file(type_buf_ptrs* ptr_arr_structs, FILE* w_file);
 
-int end_of_line(char sym);
+int put_line(FILE* w_file, type_prop_line* ptr_line);
 
-int put_line(FILE* w_file, char* ptr_line);
+int put_buffer(FILE* w_file, type_buf_structs* ptr_arr_structs);
 
-int is_line_empty(char* ptr_line);
+static int is_line_empty(char* ptr_line);
 
 int comparator_straight(const void* line1, const void* line2);
 
@@ -104,13 +122,6 @@ int comparator_reverse(const void* line1, const void* line2);
 
 int print_help(char* filename);
 
-
-enum TYPE_SORT
-{
-    MERGE = 0,
-    QSORT = 1
-};
-//char sep_line[] = "Encyclopedia of Russian Life, (C) A.S.Pushkin feat. D.A.Matiushin\n";
-
+int end_of_line(char sym);
 
 #endif // ONEGIN_H_INCLUDED

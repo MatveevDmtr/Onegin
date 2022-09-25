@@ -1,42 +1,32 @@
+#include <sys\stat.h>
+
 #include "onegin.h"
 #include "defines.h"
 
 int read_file(char* filename,
               type_buf_char* ptr_text_buf,
-              type_buf_ptrs* ptr_buf_adrs,
-              type_buf_ptrs* ptr_const_buf_adrs)   //fread ftell fseek
+              type_buf_structs* ptr_arr_structs,
+              type_buf_ptrs* ptr_arr_adrs)
 {
     FILE* text_file = open_file_rmode(filename);
 
-    //def_and_check(ptr_text_buf->Size, get_file_size(text_file), NULL);
-
     ptr_text_buf->Size = safe_def_int(get_file_size(text_file) + 1, NULL + 1);
-
-    //Assert(ptr_text_buf->Size == NULL);
 
     printf("Size of file is: %d bytes.\n", ptr_text_buf->Size);
 
-    //def_and_check(ptr_text_buf->Ptr, allocate_array(char, ptr_text_buf->Size), NULL);
-
     ptr_text_buf->Ptr = allocate_array(char, ptr_text_buf->Size);
 
-    //Assert(ptr_text_buf->Ptr == NULL);
-
-    text_to_buffer(text_file, ptr_text_buf); //r_file?      // rename
-
-    //print_arr_ptrs(ptr_buf_adrs);
+    text_to_buffer(text_file, ptr_text_buf);
 
     fclose(text_file);
 
     make_pointers_to_lines(ptr_text_buf,
-                           ptr_buf_adrs,
-                           ptr_const_buf_adrs);
-
-    //txDump((*ptr_text_buf).Ptr);
+                           ptr_arr_structs,
+                           ptr_arr_adrs);
 
     printf("Symbols 7-8 in buffer: %d %d\n", *((*ptr_text_buf).Ptr + 7), *((*ptr_text_buf).Ptr + 8));
     printf("Symbols 16-18 in buffer: %d %d %d\n", *((*ptr_text_buf).Ptr + 16), *((*ptr_text_buf).Ptr + 17), *((*ptr_text_buf).Ptr + 18));
-    printf("Size of arr_ptrs: %d\n", (*ptr_buf_adrs).Size);
+    printf("Size of arr_ptrs: %d\n", (*ptr_arr_structs).Size);
 
     return 0;
 }
@@ -56,30 +46,21 @@ FILE* open_file_rmode(char* filename)
     return r_file;
 }
 
-// rename, transfer to read_file
 int make_pointers_to_lines(type_buf_char* ptr_text_buf,
-                           type_buf_ptrs* ptr_buf_adrs,
-                           type_buf_ptrs* ptr_const_buf_adrs)
+                           type_buf_structs* ptr_arr_structs,
+                           type_buf_ptrs* ptr_arr_adrs)
 {
     ptr_text_buf->Num_lines = count_lines(ptr_text_buf);
 
     printf("Num lines: %d\n", ptr_text_buf->Num_lines);
 
-    ptr_buf_adrs->Ptr       = allocate_array(char*, ptr_text_buf->Num_lines);
-    ptr_const_buf_adrs->Ptr = allocate_array(char*, ptr_text_buf->Num_lines);
+    ptr_arr_structs      ->Ptr = allocate_array(type_prop_line , ptr_text_buf->Num_lines);
+    ptr_arr_adrs         ->Ptr = allocate_array(type_prop_line*, ptr_text_buf->Num_lines);
 
-    create_array_ptr(ptr_text_buf, ptr_buf_adrs);
+    ptr_arr_structs->Size = ptr_text_buf->Num_lines;
+    ptr_arr_adrs   ->Size = ptr_text_buf->Num_lines;
 
-    ptr_const_buf_adrs->Size = ptr_buf_adrs->Size;
-
-    //printf("PTR_ARRAY_CREATED\n");
-                                                         // get rid of 2nd ptr array
-    for (size_t i = 0; i < ptr_text_buf->Num_lines; i++) // move to copy function
-    {
-        (ptr_const_buf_adrs->Ptr)[i] = (ptr_buf_adrs->Ptr)[i];
-
-        printf("Pointer %p copied\n", (ptr_const_buf_adrs->Ptr)[i]);
-    }
+    create_array_ptr(ptr_text_buf, ptr_arr_structs, ptr_arr_adrs);
 }
 
 int text_to_buffer(FILE* file, type_buf_char* ptr_text_buf)
@@ -100,16 +81,13 @@ int text_to_buffer(FILE* file, type_buf_char* ptr_text_buf)
     return 1;
 }
 
-int create_array_ptr(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs) // replace
+int create_array_ptr(type_buf_char*    ptr_text_buf,
+                     type_buf_structs* ptr_arr_structs,
+                     type_buf_ptrs* ptr_arr_adrs)
 {
     unsigned long int index_line = 0;
 
     char* ptr_prev_line = ptr_text_buf->Ptr;
-
-    //(ptr_buf_adrs->Ptr)[index_line] = ptr_text_buf->Ptr;
-    //printf("start_ptr_size: %d", ptr_buf_adrs->Size);
-
-    //printf("Line pointer: %d\n", (int*)(ptr_text_buf->Ptr));
 
     for (size_t i = 0; i < ptr_text_buf->Size; i++)
     {
@@ -118,9 +96,12 @@ int create_array_ptr(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs) /
         {
             if (!is_line_empty(ptr_prev_line))
             {
-                ptr_buf_adrs->Size++;
+                (ptr_arr_structs->Ptr)[index_line] = {ptr_prev_line,
+                                                     (ptr_text_buf->Ptr) + i - ptr_prev_line};
 
-                (ptr_buf_adrs->Ptr)[index_line] = ptr_prev_line;
+                (ptr_arr_adrs->Ptr)[index_line] = (ptr_arr_structs->Ptr) + index_line;
+
+                printf("Len line while creating struct array: %d\n", (ptr_text_buf->Ptr) + i - ptr_prev_line);
 
                 index_line++;
 
@@ -131,10 +112,12 @@ int create_array_ptr(type_buf_char* ptr_text_buf, type_buf_ptrs* ptr_buf_adrs) /
         }
     }
 
+    printf("Len first line: %d", (ptr_arr_structs->Ptr)[0].Loc);
+
     return 1;
 }
-// static - where to create
-int is_line_empty(char* ptr_line)
+
+static int is_line_empty(char* ptr_line)
 {
     while (!end_of_line(*ptr_line))
     {
@@ -179,23 +162,23 @@ int count_lines(type_buf_char* ptr_text_buf)
     return num_lines;
 }
 
-int get_file_size(FILE* file) // fstat
+int get_file_size(FILE* file)
 {
     Assert(file == NULL);
 
-    fseek(file, 0, SEEK_END);
+    struct stat buf;
 
-    int file_size = ftell(file);
+    int errcode = fstat(fileno(file), &buf);
 
-    fseek(file, 0, SEEK_SET);
+    Assert(errcode != NULL);
 
-    return file_size;
+    printf("File size = %d\n", buf.st_size);
+
+    return buf.st_size;
 }
 
 bool isletter(char sym)
 {
-    //printf("a %d, z %d, A %d, Z %d, à %d, ÿ %d, À %d, ß %d\n", 'a', 'z', 'A', 'Z', 'à', 'ÿ', 'À', 'ß');
-
     if (('a' <= sym && sym <= 'z') ||
         ('A' <= sym && sym <= 'Z') ||
         ('à' <= sym && sym <= 'ÿ') ||
@@ -213,6 +196,5 @@ int end_of_line(char sym)
             sym == '\n' ||
             sym == '\r') ?
             true : false;
-    // return cond ? true : false;
 }
 

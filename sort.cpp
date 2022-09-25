@@ -5,66 +5,71 @@
 int comparator_straight(const void* line1, const void* line2)
 {
     fprintf(stderr, "Pointers in comparator:      %p %p\n",    line1, line2);
-    fprintf(stderr, "Changing type in comparator: %p %p\n\n",  *(const char**)line1, *(const char**)line2);
-    fprintf(stderr, "Strings in comparator:      /%s/%s/\n\n", *(const char**)line1, *(const char**)line2);
+    fprintf(stderr, "Changing type in comparator: %p %p\n\n",  (type_prop_line*)line1, (type_prop_line*)line2);
+    fprintf(stderr, "Strings in comparator:      /%s/%s/\n\n", (*(type_prop_line**)line1)->Loc,
+                                                               (*(type_prop_line**)line2)->Loc);
 
-    return str_compare(*(const char**)line1, *(const char**)line2); // enum
+    return str_compare(*(type_prop_line**)line1, *(type_prop_line**)line2);
 }
 
 int comparator_reverse(const void* line1, const void* line2)
 {
-    return str_compare_reverse(*(const char**)line1, *(const char**)line2); // enum
+    return str_compare_reverse(*(type_prop_line**)line1,
+                               *(type_prop_line**)line2);
 }
 
-int sort_text(type_buf_ptrs* ptr_buf_adrs,
-              char* type_sort,
+int sort_text(type_buf_ptrs* ptr_arr_adrs,
+              TYPE_SORT type_sort,
               int (*comparator)(const void* line1, const void* line2))
 {
-    if (!strcmp(type_sort, "merge")) // case
+    switch(type_sort)
     {
-        merge_sort_all(ptr_buf_adrs, comparator);
-    }
-    else if(!strcmp(type_sort, "qsort"))
-    {
-        printf("Start qsort\n");
+        case MERGE:
+            merge_sort_all(ptr_arr_adrs, comparator);
+            break;
 
-        qsort(ptr_buf_adrs->Ptr, ptr_buf_adrs->Size, sizeof(char*), comparator);
-    }
-    else
-    {
-        $r;
-        printf("Undefined type of sort\n");
-        $d;
+        case QSORT:
+            printf("Start qsort\n");
+            qsort(ptr_arr_adrs->Ptr, ptr_arr_adrs->Size, sizeof(char*), comparator);
+            break;
+
+        default:
+            $r;
+            printf("Undefined type of sort\n");
+            $d;
     }
 }
 
-int merge_sort_all(type_buf_ptrs* ptr_buf_adrs, int (*comparator)(const void* line1, const void* line2))
+int merge_sort_all(type_buf_ptrs* ptr_arr_adrs, int (*comparator)(const void* line1, const void* line2))
 {
     type_buf_ptrs temp_arr = {NULL, 0};
 
-    temp_arr.Ptr = allocate_array(char*, ptr_buf_adrs->Size);
+    temp_arr.Ptr = allocate_array(type_prop_line*, ptr_arr_adrs->Size);
 
     Assert(temp_arr.Ptr == NULL);
 
-    for (size_t i = 0; i < ptr_buf_adrs->Size; i++)
+    for (size_t i = 0; i < ptr_arr_adrs->Size; i++)
     {
-        temp_arr.Ptr[i] = (ptr_buf_adrs->Ptr)[i];
+        temp_arr.Ptr[i] = (ptr_arr_adrs->Ptr)[i];
     }
+    printf("Copy to temp finished\n");
+    printf("SIze of arr_adrs: %d\n", ptr_arr_adrs->Size);
 
-    single_merge(ptr_buf_adrs,
+    single_merge(ptr_arr_adrs,
                  &temp_arr,
-                 ptr_buf_adrs->Ptr,
-                 ptr_buf_adrs->Ptr + ptr_buf_adrs->Size,
+                 ptr_arr_adrs->Ptr,
+                 ptr_arr_adrs->Ptr + ptr_arr_adrs->Size,
                  comparator);
 }
 
 int single_merge(type_buf_ptrs* arr,
                  type_buf_ptrs* temp,
-                 char** ptr_start,
-                 char** ptr_end,
+                 type_prop_line** ptr_start,
+                 type_prop_line** ptr_end,
                  int (*comparator)(const void* line1, const void* line2))
 {
-    char** ptr_mid = ptr_start + (ptr_end - ptr_start) / 2;
+    printf("start end pointers: %d %d\n", ptr_start, ptr_end);
+    type_prop_line** ptr_mid = ptr_start + (ptr_end - ptr_start) / 2;
 
     if (ptr_end - ptr_start <= 1)
     {
@@ -74,23 +79,26 @@ int single_merge(type_buf_ptrs* arr,
     single_merge(arr, temp, ptr_start, ptr_mid, comparator);
     single_merge(arr, temp, ptr_mid  , ptr_end, comparator);
 
+    printf("going to Merge\n");
+
     Merge(arr, temp, ptr_start, ptr_mid, ptr_end, comparator);
 }
 
 int Merge(type_buf_ptrs* arr,
           type_buf_ptrs* temp,
-          char** ptr1,
-          char** ptr2,
-          char** ptr2_end,
+          type_prop_line** ptr1,
+          type_prop_line** ptr2,
+          type_prop_line** ptr2_end,
           int (*comparator)(const void* line1, const void* line2))
 {
-    char** ptr1_end = ptr2;
+    type_prop_line** ptr1_end = ptr2;
 
     int i = ptr1 - (arr->Ptr);
+    printf("start While in Merge\n");
     while (ptr1 < ptr1_end && ptr2 < ptr2_end)
     {
-        printf("Pointers to comparator: %p %p\n", *ptr1,  *ptr2);
-        printf("Strings  to comparator: %c %c\n", **ptr1, **ptr2);
+        printf("Adr ptr1: ", &ptr1);
+        printf("Pointers to comparator: %p %p\n", ptr1,  ptr2);
 
         if (comparator((const void*)ptr1, (const void*)ptr2) < NULL)
         {
@@ -125,26 +133,31 @@ int Merge(type_buf_ptrs* arr,
     }
 }
 
-int str_compare(const char* ptr_line1, const char* ptr_line2)
+int str_compare(type_prop_line* ptr_struct_line1, type_prop_line* ptr_struct_line2)
 {
-    Assert(ptr_line1 == NULL);
-    Assert(ptr_line2 == NULL);
+    Assert(ptr_struct_line1 == NULL);
+    Assert(ptr_struct_line2 == NULL);
 
     bool end1_reached = false;
     bool end2_reached = false;
 
-    printf("Ptr_to_sym_in_line1: %d, ptr_to_sym_in_line2^ %d", ptr_line1, ptr_line2);
+    char* ptr_line1 = ptr_struct_line1->Loc;
+    char* ptr_line2 = ptr_struct_line2->Loc;
 
-    while(!(end1_reached = end_of_line(*ptr_line1)) &&
-          !(end2_reached = end_of_line(*ptr_line2)))
+    char* ptr_end1 = ptr_struct_line1->Loc + ptr_struct_line1->Len;
+    char* ptr_end2 = ptr_struct_line2->Loc + ptr_struct_line2->Len;
+
+    printf("Ptr_to_sym_in_line1: %d, ptr_to_sym_in_line2: %d\n", ptr_line1, ptr_line2);
+
+    while(!(end1_reached = (ptr_line1 < ptr_end1)) &&
+          !(end2_reached = (ptr_line2 < ptr_end2)))
     {
-
         printf("sym_in_line1: %c, sym_in_line2^ %c", *ptr_line1, *ptr_line2);
-        while (!(end1_reached = end_of_line(*ptr_line1)) && !isletter(*ptr_line1))
+        while (!(end1_reached = (ptr_line1 < ptr_end1)) && !isletter(*ptr_line1))
         {
             ptr_line1++;
         }
-        while (!(end2_reached = end_of_line(*ptr_line2)) && !isletter(*ptr_line2))
+        while (!(end2_reached = (ptr_line2 < ptr_end2)) && !isletter(*ptr_line2))
         {
             ptr_line2++;
         }
@@ -176,29 +189,17 @@ int str_compare(const char* ptr_line1, const char* ptr_line2)
     return 0;
 }
 
-int str_compare_reverse(const char* ptr_line1, const char* ptr_line2) // array struct
+int str_compare_reverse(type_prop_line* ptr_struct_line1,
+                        type_prop_line* ptr_struct_line2)
 {
-    Assert(ptr_line1 == NULL);
-    Assert(ptr_line2 == NULL);
+    Assert(ptr_struct_line1 == NULL);
+    Assert(ptr_struct_line2 == NULL);
 
-    const char* ptr_line1_start = ptr_line1;
-    const char* ptr_line2_start = ptr_line2;
+    const char* ptr_line1_start = ptr_struct_line1->Loc;
+    const char* ptr_line2_start = ptr_struct_line2->Loc;
 
-    while(!end_of_line(*ptr_line1))
-    {
-        ptr_line1++;
-    }
-    ptr_line1--;
-
-    //printf("last sym of line: %c\n", *ptr_line1);
-
-    while(!end_of_line(*ptr_line2))
-    {
-        ptr_line2++;
-    }
-    ptr_line2--;
-
-    //printf("last sym of line: %c\n", *ptr_line2);
+    char* ptr_line1 = ptr_struct_line1->Loc + ptr_struct_line1->Len - 1;
+    char* ptr_line2 = ptr_struct_line2->Loc + ptr_struct_line2->Len - 1;
 
     bool start1_reached = false;
     bool start2_reached = false;
@@ -239,23 +240,6 @@ int str_compare_reverse(const char* ptr_line1, const char* ptr_line2) // array s
     {
         return 1;
     }
-
-    return 0;
-}
-
-int test_comparison()
-{
-    char line1[] = "abcDe";
-    char line2[] = "abcd";
-    int res = str_compare(line1, line2);
-    printf("Comparison %s and %s: %d\n", line1, line2, res);
-    if (res < 0)
-    {
-        printf("Comparison %s and %s successful\n", line1, line2);
-
-        return true;
-    }
-    printf("Comparison failed\n");
 
     return 0;
 }

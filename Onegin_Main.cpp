@@ -5,14 +5,25 @@
 
 int main(int argc, char* argv[])
 {
-    //int* location = allocate_array(int, 15);
+    TYPE_SORT type_sort = MERGE; //default
 
-    //$(location);
-    //return 0;
-    TYPE_SORT type_sort = MERGE;
-    // move from main
-    char input_file_name[30] = "composition.txt"; // magic number
+    char input_file_name[MAX_LEN_LINE]= "composition.txt"; // default
 
+    handle_cmd_args(argc, argv, &type_sort);
+
+    type_buf_char buf_text             = {NULL, 0, 0};
+    type_buf_structs arr_structs       = {NULL, 0   };
+    type_buf_ptrs arr_adrs             = {NULL, 0   };
+
+    read_file(input_file_name, &buf_text, &arr_structs, &arr_adrs);
+
+    sort_and_write("out.txt", &buf_text, &arr_structs, &arr_adrs);
+
+    getchar();
+}
+
+int handle_cmd_args(int argc, char** argv, TYPE_SORT* ptr_type_sort)
+{
     for(int args_count = 1; args_count < argc; args_count++)
     {
         if (!strcmp(argv[args_count], "stop"))
@@ -28,15 +39,11 @@ int main(int argc, char* argv[])
         }
         else if(!strcmp(argv[args_count], "merge"))
         {
-            type_sort = MERGE;
+            *ptr_type_sort = MERGE;
         }
         else if(!strcmp(argv[args_count], "qsort"))
         {
-            type_sort = QSORT;
-        }
-        else if(!strcmp(argv[args_count], "merge"))
-        {
-            type_sort = MERGE;
+            *ptr_type_sort = QSORT;
         }
         else
         {
@@ -52,66 +59,43 @@ int main(int argc, char* argv[])
         $r;
         printf("Mode of the program has not been chosen.\n"
                 "Please, restart the program and "
-                "enter -h or help to read the instruction.\n");
+                "enter -h or help to read the instruction.\n"
+                "The program starts with default parameters.\n");
         $d;
-        return 0;
     }
 
-    type_buf_char buf_text       = {NULL, 0, 0};
-    type_buf_ptrs buf_ptrs       = {NULL, 0   };
-    type_buf_ptrs const_buf_ptrs = {NULL, 0   }; // origin
-
-    read_file(input_file_name, &buf_text, &buf_ptrs, &const_buf_ptrs); // wtf buf_ptrs
-
-    print_arr_ptrs(&buf_ptrs);
-
-    test_comparison();
-
-    sort_and_write("out.txt", &buf_text, &buf_ptrs, &const_buf_ptrs);
-
-    getchar();
+    return 1;
 }
-// move to main
+
 int sort_and_write(char* filename,
                    type_buf_char* ptr_text_buf,
-                   type_buf_ptrs* ptr_buf_adrs,
-                   type_buf_ptrs* ptr_const_buf_adrs)
+                   type_buf_structs* ptr_arr_structs,
+                   type_buf_ptrs* ptr_arr_adrs)
 {
     FILE* w_file = open_Wfile(filename);
 
     printf("Wfile opened\n");
-                            // enum??
-    sort_text(ptr_buf_adrs, "merge", comparator_straight);
 
-    putting_buf_text_to_file(ptr_buf_adrs, w_file);
+    sort_text(ptr_arr_adrs, MERGE, comparator_straight);
 
-    sort_text(ptr_buf_adrs, "merge", comparator_reverse);
+    putting_buf_text_to_file(ptr_arr_adrs, w_file);
 
-    putting_buf_text_to_file(ptr_buf_adrs, w_file);
+    sort_text(ptr_arr_adrs, MERGE, comparator_reverse);
 
-    putting_buf_text_to_file(ptr_const_buf_adrs, w_file);
+    putting_buf_text_to_file(ptr_arr_adrs, w_file);
+
+    put_buffer(w_file, ptr_arr_structs);
 
     fclose(w_file);
 }
 
-
-/*char* allocate_text(int num_bytes)
-{
-    char* ptr_buf = (char*)calloc(num_bytes, sizeof(char));
-
-    Assert(ptr_buf == NULL);
-
-    return ptr_buf;
-}*/
-
-
-int print_arr_ptrs(type_buf_ptrs* ptr_buf_adrs)
+int print_arr_ptrs(type_buf_structs* ptr_arr_structs)
 {
     printf("Print sorted list: \n");
-    printf("size of array ptrs: %d\n", ptr_buf_adrs->Size);
-    for (size_t i = 0; i < ptr_buf_adrs->Size; i++)
+    printf("size of array ptrs: %d\n", ptr_arr_structs->Size);
+    for (size_t i = 0; i < ptr_arr_structs->Size; i++)
     {
-        printf("line: %c\t", *(ptr_buf_adrs->Ptr[i]));
+        printf("line: %c\t", (ptr_arr_structs->Ptr)[i].Loc);
     }
     printf("\n");
 }
